@@ -78,10 +78,15 @@ export class AuthService {
    * Backend sets httpOnly AccessToken and RefreshToken cookies.
    */
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    return ApiClient.post<AuthResponse>('/auth/login', {
+    const res = await ApiClient.post<AuthResponse>('/auth/login', {
       email: credentials.email.trim().toLowerCase(),
       password: credentials.password,
     });
+    const tokens = (res as any)?.data?.tokens || (res as any)?.tokens;
+    if (tokens?.accessToken || tokens?.refreshToken) {
+      ApiClient.setTokens(tokens.accessToken, tokens.refreshToken);
+    }
+    return res;
   }
 
   /**
@@ -133,6 +138,8 @@ export class AuthService {
       await ApiClient.post('/auth/logout');
     } catch (err) {
       console.warn('[AuthService] Logout request warning:', err);
+    } finally {
+      ApiClient.clearTokens();
     }
   }
 
@@ -141,12 +148,7 @@ export class AuthService {
    * Reads RefreshToken cookie and issues new cookies.
    */
   static async refreshToken(): Promise<boolean> {
-    try {
-      await ApiClient.post('/auth/refresh-token');
-      return true;
-    } catch {
-      return false;
-    }
+    return ApiClient.refreshAuth();
   }
 
   /**
