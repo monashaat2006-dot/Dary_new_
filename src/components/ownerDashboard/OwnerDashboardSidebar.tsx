@@ -1,4 +1,4 @@
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../utils/LocaleContext';
 import logo from '../../assets/branding/FINAL-LOGO1.png';
@@ -14,6 +14,7 @@ export default function OwnerDashboardSidebar({
   mobileOpen,
   onCloseMobile,
 }: OwnerDashboardSidebarProps) {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { t, locale } = useLocale();
 
@@ -106,7 +107,9 @@ export default function OwnerDashboardSidebar({
     },
   ];
 
-  const displayName = user?.name || user?.email?.split('@')[0] || (locale === 'ar' ? 'مالك العقار' : 'Property Owner');
+  const displayName = user?.firstName
+    ? `${user.firstName} ${user.lastName || ''}`.trim()
+    : (user?.name || user?.email?.split('@')[0] || (locale === 'ar' ? 'مالك العقار' : 'Property Owner'));
   const avatarLetter = (displayName[0] || 'O').toUpperCase();
 
   return (
@@ -170,9 +173,10 @@ export default function OwnerDashboardSidebar({
         <button
           type="button"
           className="dary-logout-btn"
-          onClick={() => {
+          onClick={async () => {
             onCloseMobile();
-            logout();
+            await logout();
+            navigate('/login', { replace: true });
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

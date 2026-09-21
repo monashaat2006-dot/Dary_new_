@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function OwnerRoute({ children }: { children?: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isOwner, isAdmin } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -34,6 +34,10 @@ export default function OwnerRoute({ children }: { children?: ReactNode }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (!isOwner && !isAdmin) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

@@ -153,6 +153,22 @@ export default function RegisterPage() {
         setFieldErrors(mapped);
       }
 
+      const errMsg = (err?.message || '').toLowerCase();
+      const errCode = (err?.code || '').toLowerCase();
+
+      if (
+        errMsg.includes('failed to fetch') ||
+        errMsg.includes('network') ||
+        errCode === 'network_error'
+      ) {
+        setErrorMsg(
+          locale === 'ar'
+            ? 'تعذر الاتصال بالخادم. يرجى التأكد من تشغيل خادم الباك إند (Backend) على المنفذ 8003.'
+            : 'Could not connect to the server. Please ensure the backend server is running on port 8003.'
+        );
+        return;
+      }
+
       setErrorMsg(
         err?.message ||
           (locale === 'ar'

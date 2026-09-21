@@ -89,6 +89,7 @@ export default function LoginPage() {
 
       const userRole = extractUserRole(user);
       const isAdminUser = isUserAdmin(user);
+      const isOwnerUser = userRole === 'owner' || userRole === 'landlord';
 
       const targetFrom = locationState?.from?.pathname;
       const isValidFrom =
@@ -97,12 +98,33 @@ export default function LoginPage() {
         targetFrom !== '/register' &&
         targetFrom !== '/verify-otp';
 
-      if (isValidFrom) {
+      // Strictly route users according to their actual role:
+      if (isAdminUser || userRole === 'super_admin' || userRole === 'admin') {
+        if (targetFrom && targetFrom.startsWith('/admin')) {
+          navigate(targetFrom, { replace: true });
+        } else {
+          navigate('/admin', { replace: true });
+        }
+        return;
+      }
+
+      if (isOwnerUser) {
+        if (targetFrom && targetFrom.startsWith('/owner-dashboard')) {
+          navigate(targetFrom, { replace: true });
+        } else {
+          navigate('/owner-dashboard', { replace: true });
+        }
+        return;
+      }
+
+      // Tenant / Student
+      if (
+        targetFrom &&
+        isValidFrom &&
+        !targetFrom.startsWith('/admin') &&
+        !targetFrom.startsWith('/owner-dashboard')
+      ) {
         navigate(targetFrom, { replace: true });
-      } else if (isAdminUser || userRole === 'admin' || userRole === 'super_admin' || userRole === 'superadmin') {
-        navigate('/admin', { replace: true });
-      } else if (userRole === 'owner') {
-        navigate('/owner-dashboard', { replace: true });
       } else {
         navigate('/dashboard', { replace: true });
       }
@@ -183,6 +205,19 @@ export default function LoginPage() {
           locale === 'ar'
             ? 'غير مصرح لك بالوصول. يرجى مراجعة إدارة المنصة.'
             : 'Access forbidden. Please contact platform administrators.'
+        );
+        return;
+      }
+
+      if (
+        errMsg.includes('failed to fetch') ||
+        errMsg.includes('network') ||
+        errCode === 'network_error'
+      ) {
+        setErrorMsg(
+          locale === 'ar'
+            ? 'تعذر الاتصال بالخادم. يرجى التأكد من تشغيل خادم الباك إند (Backend) على المنفذ 8003.'
+            : 'Could not connect to the server. Please ensure the backend server is running on port 8003.'
         );
         return;
       }

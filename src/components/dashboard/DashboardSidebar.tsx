@@ -1,4 +1,4 @@
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../utils/LocaleContext';
 import logo from '../../assets/branding/FINAL-LOGO1.png';
@@ -16,7 +16,8 @@ export default function DashboardSidebar({
   onCloseMobile,
   unreadCount = 0,
 }: DashboardSidebarProps) {
-  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const { user, logout, role } = useAuth();
   const { t, locale } = useLocale();
 
   const navItems = [
@@ -106,8 +107,19 @@ export default function DashboardSidebar({
     },
   ];
 
-  const displayName = user?.name || user?.email?.split('@')[0] || (locale === 'ar' ? 'طالب داري' : 'Dary Student');
+  const displayName = user?.firstName
+    ? `${user.firstName} ${user.lastName || ''}`.trim()
+    : (user?.name || user?.email?.split('@')[0] || (locale === 'ar' ? 'طالب داري' : 'Dary Student'));
   const avatarLetter = (displayName[0] || 'D').toUpperCase();
+
+  const roleLabel =
+    role === 'super_admin'
+      ? (locale === 'ar' ? 'المدير العام (Super Admin)' : 'Super Admin')
+      : role === 'admin'
+      ? (locale === 'ar' ? 'مدير النظام (Admin)' : 'Admin')
+      : role === 'owner'
+      ? (locale === 'ar' ? 'مالك عقار (Owner)' : 'Property Owner')
+      : (locale === 'ar' ? 'مستأجر • طالب' : 'Tenant • Student');
 
   return (
     <aside className={`dary-sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
@@ -161,7 +173,7 @@ export default function DashboardSidebar({
           <div className="dary-user-info">
             <span className="dary-user-name">{displayName}</span>
             <span className="dary-user-role-badge">
-              {locale === 'ar' ? 'مستأجر • طالب' : 'Tenant • Student'}
+              {roleLabel}
             </span>
           </div>
         </Link>
@@ -169,9 +181,10 @@ export default function DashboardSidebar({
         <button
           type="button"
           className="dary-logout-btn"
-          onClick={() => {
+          onClick={async () => {
             onCloseMobile();
-            logout();
+            await logout();
+            navigate('/login', { replace: true });
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -157,17 +157,26 @@ export class AuthService {
     const res = await ApiClient.get<any>('/profile/me');
     const profile = res?.data?.profile || res?.profile || res?.data || res;
     const user = profile?.user || profile;
+
+    const userRoles = user?.userRoles || profile?.userRoles || [];
+    const extractedRoles: string[] = userRoles
+      .map((ur: any) => ur?.role?.name || ur?.name || (typeof ur === 'string' ? ur : null))
+      .filter(Boolean);
+
+    const primaryRole =
+      extractedRoles.includes('super_admin') ? 'super_admin' :
+      extractedRoles.includes('admin') ? 'admin' :
+      extractedRoles.includes('owner') ? 'owner' :
+      extractedRoles.includes('tenant') ? 'tenant' :
+      user?.role || profile?.role || 'tenant';
+
     return {
       id: user?.id || profile?.userId,
       ...user,
       profile: profile,
-      role:
-        user?.role ||
-        profile?.role ||
-        (Array.isArray(user?.roles) ? user.roles[0] : null) ||
-        (Array.isArray(profile?.roles) ? profile.roles[0] : null),
-      roles: user?.roles || profile?.roles,
-      userRoles: user?.userRoles || profile?.userRoles,
+      role: primaryRole,
+      roles: extractedRoles.length > 0 ? extractedRoles : (user?.roles || [primaryRole]),
+      userRoles,
     } as User;
   }
 

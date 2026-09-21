@@ -14,41 +14,50 @@ export interface AuthContextType {
   isTenant: boolean;
   isOwner: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
 }
 
 export function extractUserRole(user: any): string | null {
   if (!user) return null;
   const u = user.user || user.profile?.user || user;
-  if (typeof u.role === 'string' && u.role) return u.role.toLowerCase();
-  if (typeof user.role === 'string' && user.role) return user.role.toLowerCase();
+
+  // Collect all possible role strings from the user object
+  const foundRoles: string[] = [];
+  if (typeof u.role === 'string' && u.role) foundRoles.push(u.role.toLowerCase());
+  if (typeof user.role === 'string' && user.role) foundRoles.push(user.role.toLowerCase());
 
   const rolesArr = u.roles || user.roles || u.userRoles || user.userRoles;
   if (Array.isArray(rolesArr)) {
     for (const r of rolesArr) {
-      if (typeof r === 'string' && r) return r.toLowerCase();
-      if (r?.name) return r.name.toLowerCase();
-      if (r?.role?.name) return r.role.name.toLowerCase();
+      if (typeof r === 'string' && r) {
+        foundRoles.push(r.toLowerCase());
+      } else if (r?.role?.name) {
+        foundRoles.push(r.role.name.toLowerCase());
+      } else if (r?.name) {
+        foundRoles.push(r.name.toLowerCase());
+      }
     }
   }
 
-  // Fallback: If user has an ID, default to tenant
+  // Check priority strictly: super_admin -> admin -> owner -> tenant
+  if (foundRoles.some((r) => r === 'super_admin' || r === 'superadmin')) return 'super_admin';
+  if (foundRoles.some((r) => r === 'admin')) return 'admin';
+  if (foundRoles.some((r) => r === 'owner' || r === 'landlord')) return 'owner';
+  if (foundRoles.some((r) => r === 'tenant' || r === 'student' || r === 'user')) return 'tenant';
+
   return 'tenant';
+}
+
+export function isUserSuperAdmin(user: any): boolean {
+  if (!user) return false;
+  const role = extractUserRole(user);
+  return role === 'super_admin';
 }
 
 export function isUserAdmin(user: any): boolean {
   if (!user) return false;
-  const u = user.user || user.profile?.user || user;
-  const directRole = typeof u.role === 'string' ? u.role.toLowerCase() : typeof user.role === 'string' ? user.role.toLowerCase() : null;
-  if (directRole === 'admin' || directRole === 'super_admin' || directRole === 'superadmin') return true;
-
-  const rolesArr = u.roles || user.roles || u.userRoles || user.userRoles;
-  if (Array.isArray(rolesArr)) {
-    for (const r of rolesArr) {
-      const str = typeof r === 'string' ? r.toLowerCase() : r?.name?.toLowerCase() || r?.role?.name?.toLowerCase();
-      if (str === 'admin' || str === 'super_admin' || str === 'superadmin') return true;
-    }
-  }
-  return false;
+  const role = extractUserRole(user);
+  return role === 'super_admin' || role === 'admin';
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -116,9 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const isTenant = role === 'tenant' || role === 'student' || role === 'user';
-  const isOwner = role === 'owner' || role === 'landlord';
-  const isAdmin = isUserAdmin(user) || role === 'admin' || role === 'super_admin' || role === 'superadmin';
+  const isSuperAdmin = isUserSuperAdmin(user) || role === 'super_admin';
+  const isAdmin = isSuperAdmin || isUserAdmin(user) || role === 'admin';
+  const isOwner = !isAdmin && (role === 'owner' || role === 'landlord');
+  const isTenant = !isAdmin && !isOwner;
 
   return (
     <AuthContext.Provider
@@ -133,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isTenant,
         isOwner,
         isAdmin,
+        isSuperAdmin,
       }}
     >
       {children}

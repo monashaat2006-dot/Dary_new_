@@ -1,4 +1,4 @@
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../utils/LocaleContext';
 import logo from '../../assets/branding/FINAL-LOGO1.png';
@@ -14,7 +14,8 @@ export default function AdminDashboardSidebar({
   mobileOpen,
   onCloseMobile,
 }: AdminDashboardSidebarProps) {
-  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const { user, logout, role } = useAuth();
   const { t, locale } = useLocale();
 
   const navItems = [
@@ -119,8 +120,14 @@ export default function AdminDashboardSidebar({
     },
   ];
 
-  const displayName = user?.name || user?.email?.split('@')[0] || (locale === 'ar' ? 'مدير النظام' : 'Administrator');
+  const displayName = user?.firstName
+    ? `${user.firstName} ${user.lastName || ''}`.trim()
+    : (user?.name || user?.email?.split('@')[0] || (locale === 'ar' ? 'مدير النظام' : 'Administrator'));
   const avatarLetter = (displayName[0] || 'A').toUpperCase();
+
+  const roleLabel = role === 'super_admin'
+    ? (locale === 'ar' ? 'المدير العام (Super Admin)' : 'Super Admin')
+    : (locale === 'ar' ? 'مدير النظام (Admin)' : 'System Admin');
 
   return (
     <aside className={`dary-sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
@@ -140,7 +147,7 @@ export default function AdminDashboardSidebar({
 
       <div className="dary-sidebar-role-badge" style={{ margin: '0 1rem 1rem', padding: '0.35rem 0.75rem', borderRadius: '6px', background: 'rgba(182, 159, 119, 0.15)', border: '1px solid rgba(182, 159, 119, 0.3)', color: '#B69F77', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
         <span>🛡️</span>
-        <span>{locale === 'ar' ? 'إدارة المنصة — Admin' : 'Platform Administration'}</span>
+        <span>{role === 'super_admin' ? (locale === 'ar' ? 'المدير العام — Super Admin' : 'Super Admin') : (locale === 'ar' ? 'إدارة المنصة — Admin' : 'Platform Administration')}</span>
       </div>
 
       <nav className="dary-sidebar-nav">
@@ -168,7 +175,7 @@ export default function AdminDashboardSidebar({
           <div className="dary-user-info">
             <span className="dary-user-name">{displayName}</span>
             <span className="dary-user-email" style={{ color: '#B69F77' }}>
-              {locale === 'ar' ? 'مدير النظام' : 'System Admin'}
+              {roleLabel}
             </span>
           </div>
         </div>
@@ -176,9 +183,10 @@ export default function AdminDashboardSidebar({
         <button
           type="button"
           className="dary-logout-btn"
-          onClick={() => {
+          onClick={async () => {
             onCloseMobile();
-            logout();
+            await logout();
+            navigate('/login', { replace: true });
           }}
           title={t.auth_logout_btn || 'تسجيل الخروج'}
         >

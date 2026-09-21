@@ -17,6 +17,7 @@ export default function DashboardHeader({
   const { locale, setLocale } = useLocale();
 
   const firstName =
+    user?.firstName ||
     user?.name?.split(' ')[0] ||
     user?.email?.split('@')[0] ||
     (locale === 'ar' ? 'طالبنا العزيز' : 'Student');
